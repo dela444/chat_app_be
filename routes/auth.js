@@ -7,17 +7,35 @@ require('dotenv').config()
 var router = express.Router()
 
 const { pool } = require('../config')
+const redisClient = require('../redis')
 
 const validationSchema = Yup.object({
   username: Yup.string()
-    .required('Username required')
+    .required('Username is a required field!')
     .min(5, 'Username too short')
     .max(35, 'Username too long!'),
   password: Yup.string()
-    .required('Password required')
+    .required('Password is a required field!')
     .min(8, 'Password too short')
     .max(35, 'Password too long!'),
 })
+
+const storeToRedis = async (user) => {
+  await redisClient.hset(
+    `user:${user.user_id}`,
+    'id',
+    user.user_id,
+    'username',
+    user.username
+  )
+}
+
+const storeUsersToRedis = async (user) => {
+  await redisClient.rpush(
+    'usersList',
+    JSON.stringify({ id: user.user_id, username: user.username })
+  )
+}
 
 let auth = {
   validationCheck: async (req, res, next) => {
@@ -94,7 +112,19 @@ let auth = {
                       })
                       return
                     } else {
-                      res.status(200).send({ authenticated: true, token })
+                      storeUsersToRedis({
+                        user_id: result.rows[0].user_id,
+                        username: req.body.username,
+                      })
+                      storeToRedis({
+                        user_id: result.rows[0].user_id,
+                        username: req.body.username,
+                      })
+                      res.status(200).send({
+                        authenticated: true,
+                        token,
+                        username: req.body.username,
+                      })
                     }
                   }
                 )
@@ -145,7 +175,11 @@ let auth = {
                     res.send({ authenticated: false, token: null })
                     return
                   } else {
-                    res.status(200).send({ authenticated: true, token })
+                    res.status(200).send({
+                      authenticated: true,
+                      token,
+                      username: result.rows[0].username,
+                    })
                   }
                 }
               }
@@ -195,9 +229,15 @@ let auth = {
                               })
                               return
                             } else {
-                              res
-                                .status(200)
-                                .send({ authenticated: true, token })
+                              storeToRedis({
+                                user_id: result.rows[0].user_id,
+                                username: req.body.username,
+                              })
+                              res.status(200).send({
+                                authenticated: true,
+                                token,
+                                username: req.body.username,
+                              })
                             }
                           }
                         )
