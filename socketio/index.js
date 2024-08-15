@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken')
 require('dotenv').config()
 
 const redisClient = require('../redis')
+const { parseUserList, parseRoomList } = require('../helpers/redisHelpers')
 
 const verifySocketUser = (socket, next) => {
   const token = socket.handshake.auth.token
@@ -14,39 +15,6 @@ const verifySocketUser = (socket, next) => {
       next()
     }
   })
-}
-
-const parseUserList = async (userList) => {
-  const newUserList = []
-  for (let user of userList) {
-    if (typeof user === 'string') {
-      const parsedUser = JSON.parse(user)
-      const userConnected = await redisClient.hget(
-        `user:${parsedUser.id}`,
-        'connected'
-      )
-      newUserList.push({
-        username: parsedUser.username,
-        userid: parsedUser.id,
-        connected: userConnected,
-      })
-    }
-  }
-  return newUserList
-}
-
-const parseRoomList = async (roomList) => {
-  const newRoomList = []
-  for (let room of roomList) {
-    if (typeof room === 'string') {
-      const parsedRoom = JSON.parse(room)
-      newRoomList.push({
-        name: parsedRoom.name,
-        roomid: parsedRoom.id,
-      })
-    }
-  }
-  return newRoomList
 }
 
 const setUpUser = async (socket) => {

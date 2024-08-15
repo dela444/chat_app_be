@@ -11,12 +11,14 @@ const rateLimiter = (seconds, limit, isAuth) => async (req, res, next) => {
     if (isAuth) {
       res.send({
         authenticated: false,
-        message: 'You have reached the rate limit. Please wait a moment before trying again.',
+        message:
+          'You have reached the rate limit. Please wait a moment before trying again.',
       })
     } else {
       res.send({
         success: false,
-        message: 'You have reached the rate limit. Please wait a moment before trying again.',
+        message:
+          'You have reached the rate limit. Please wait a moment before trying again.',
       })
     }
   } else {
