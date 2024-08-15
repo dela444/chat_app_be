@@ -5,6 +5,7 @@ var router = express.Router()
 
 const { pool } = require('../config')
 const redisClient = require('../redis')
+const rateLimiter = require('../controllers/redisController')
 
 const validationSchema = Yup.object({
   name: Yup.string()
@@ -135,6 +136,11 @@ router.post(
   index.createChatRoom
 )
 
-router.post('/message', index.messageValidationCheck, index.storeMessage)
+router.post(
+  '/message',
+  index.messageValidationCheck,
+  rateLimiter(60, 10, false),
+  index.storeMessage
+)
 
 module.exports = router

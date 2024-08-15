@@ -8,6 +8,7 @@ var router = express.Router()
 
 const { pool } = require('../config')
 const redisClient = require('../redis')
+const rateLimiter = require('../controllers/redisController')
 
 const validationSchema = Yup.object({
   username: Yup.string()
@@ -267,12 +268,18 @@ let auth = {
 router.post(
   '/register',
   auth.validationCheck,
+  rateLimiter(60, 2, true),
   auth.checkIfUserExists,
   auth.registerUser
 )
 
 router.get('/check-auth', auth.isUserAuthenticated)
 
-router.post('/login', auth.validationCheck, auth.login)
+router.post(
+  '/login',
+  auth.validationCheck,
+  rateLimiter(60, 5, true),
+  auth.login
+)
 
 module.exports = router
