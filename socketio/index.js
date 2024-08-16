@@ -4,28 +4,29 @@ require('dotenv').config()
 const redisClient = require('../redis')
 const { parseUserList, parseRoomList } = require('../helpers/redisHelpers')
 
-const verifySocketUser = (socket, next) => {
+const verifySocketUser = async (socket, next) => {
   const token = socket.handshake.auth.token
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      next(err)
-      return
-    } else {
-      socket.user = { ...decoded }
-      next()
-    }
-  })
+  try {
+    const decoded = await new Promise((resolve, reject) => {
+      jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(decoded)
+        }
+      })
+    })
+
+    socket.user = { ...decoded }
+    next()
+  } catch (err) {
+    next(err)
+  }
 }
 
 const setUpUser = async (socket) => {
   socket.join(socket.user.userid)
-  await redisClient.hset(
-    `user:${socket.user.userid}`,
-    'id',
-    socket.user.userid,
-    'connected',
-    true
-  )
+  await redisClient.hset(`user:${socket.user.userid}`, 'connected', true)
   const usersList = await redisClient.lrange('usersList', 0, -1)
   const parsedUserList = await parseUserList(usersList)
   const userRooms = parsedUserList.map((user) => user.userid)
@@ -63,13 +64,7 @@ const setUpUser = async (socket) => {
 }
 
 const onDisconnection = async (socket) => {
-  await redisClient.hset(
-    `user:${socket.user.userid}`,
-    'id',
-    socket.user.userid,
-    'connected',
-    false
-  )
+  await redisClient.hset(`user:${socket.user.userid}`, 'connected', false)
   const usersList = await redisClient.lrange('usersList', 0, -1)
   const parsedUserList = await parseUserList(usersList)
   const userRooms = parsedUserList.map((user) => user.userid)
