@@ -11,6 +11,8 @@ const {
   onDisconnection,
   sendMessage,
   joinRoom,
+  lastSeenMessage,
+  messageSeen,
 } = require('./socketio')
 
 var chatRouter = require('./routes/chat')
@@ -43,6 +45,15 @@ io.on('connect', (socket) => {
   setUpUser(socket)
   socket.on('sendMessage', (message) => {
     sendMessage(socket, message)
+  })
+  socket.on('messageDelivered', (message) => {
+    socket.to(message.from).emit('messageDelivered', message)
+  })
+  socket.on('messagesRead', (userid) => {
+    lastSeenMessage(socket, userid)
+  })
+  socket.on('messageSeen', (data) => {
+    messageSeen(socket, data)
   })
   socket.on('joinRoom', (data) => {
     joinRoom(socket, data)

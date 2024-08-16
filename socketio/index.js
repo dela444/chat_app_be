@@ -45,17 +45,20 @@ const setUpUser = async (socket) => {
     -1
   )
 
-  const parsedMeessages = messages.map((message) => {
+  const parsedMessages = messages.map((message) => {
     const parsedMessage = message.split('.')
     return {
-      to: parsedMessage[0],
+      recipient_id: parsedMessage[0],
       from: parsedMessage[1],
       content: parsedMessage[2],
+      message_id: parsedMessage[3],
+      status: parsedMessage[4],
+      creation_time: parsedMessage[6],
     }
   })
 
-  if (parsedMeessages && parsedMeessages.length > 0) {
-    socket.emit('messages', parsedMeessages)
+  if (parsedMessages && parsedMessages.length > 0) {
+    socket.emit('messages', parsedMessages)
   }
 }
 
@@ -76,12 +79,24 @@ const onDisconnection = async (socket) => {
 }
 
 const sendMessage = async (socket, message) => {
-  const messageString = [message.to, message.from, message.content].join('.')
+  try {
+    const messageString = [
+      message.recipient_id,
+      message.from,
+      message.content,
+      message.message_id,
+      'delivered',
+      message.recipient_type,
+      message.creation_time,
+    ].join('.')
 
-  await redisClient.lpush(`messages:${message.to}`, messageString)
-  await redisClient.lpush(`messages:${message.from}`, messageString)
+    await redisClient.lpush(`messages:${message.recipient_id}`, messageString)
+    await redisClient.lpush(`messages:${message.from}`, messageString)
 
-  socket.to(message.to).emit('sendMessage', message)
+    socket.to(message.recipient_id).emit('sendMessage', message)
+  } catch (error) {
+    console.log(error)
+  }
 }
 
 const joinRoom = async (socket, data) => {
@@ -97,9 +112,12 @@ const joinRoom = async (socket, data) => {
       const parsedMessage = message.split('.')
 
       return {
-        to: parsedMessage[0],
-        from: parsedMessage[1],
+        recipient_id: parsedMessage[0],
         content: parsedMessage[2],
+        message_id: parsedMessage[3],
+        status: parsedMessage[4],
+        from: parsedMessage[1],
+        creation_time: parsedMessage[6],
       }
     })
     if (parsedMessages && parsedMessages.length > 0) {
@@ -108,10 +126,42 @@ const joinRoom = async (socket, data) => {
   }
 }
 
+const lastSeenMessage = async (socket, data) => {
+  await redisClient.hset(
+    `lastSeenMessage:${socket.user.userid}`,
+    `chat:${data.userid}`,
+    data.lastSeenMessage
+  )
+  const lastSeenMessage = await redisClient.hget(
+    `lastSeenMessage:${data.userid}`,
+    `chat:${socket.user.userid}`
+  )
+  if (!lastSeenMessage) {
+    await redisClient.hset(
+      `lastSeenMessage:${data.userid}`,
+      `chat:${socket.user.userid}`,
+      '0'
+    )
+  }
+  socket.emit('messagesRead', lastSeenMessage || '0')
+  socket.to(data.userid).emit('seen', socket.user.userid)
+}
+
+const messageSeen = async (socket, data) => {
+  await redisClient.hset(
+    `lastSeenMessage:${socket.user.userid}`,
+    `chat:${data.userid}`,
+    data.messageid
+  )
+  socket.to(data.userid).emit('messageSeen', true)
+}
+
 module.exports = {
   verifySocketUser,
   setUpUser,
   onDisconnection,
   sendMessage,
   joinRoom,
+  lastSeenMessage,
+  messageSeen,
 }

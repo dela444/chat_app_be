@@ -20,6 +20,9 @@ const roomValidationSchema = Yup.object({
 
 const messageValidationSchema = Yup.object({
   message: Yup.string().required().min(1).max(255),
+  from: Yup.string().required().min(1),
+  recipient_id: Yup.string().required().min(1),
+  recipient_type: Yup.string().required(),
 })
 
 module.exports = {
