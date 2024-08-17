@@ -20,7 +20,7 @@ router.post(
 router.post(
   '/message',
   messageValidationCheck,
-  rateLimiter(60, 10, false),
+  rateLimiter(60, 10),
   createMessage
 )
 

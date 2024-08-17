@@ -9,22 +9,15 @@ const {
   storeUserToRedis,
 } = require('../helpers/redisHelpers')
 const { userValidationSchema } = require('../helpers/validationHelpers')
+const CustomError = require('./errorController')
 
 const userValidationCheck = async (req, res, next) => {
   const data = req.body
   try {
-    const valid = await userValidationSchema.validate(data)
-    if (valid) {
-      next()
-    } else {
-      res
-        .status(422)
-        .send({ authenticated: false, message: 'Invalid credentials' })
-    }
+    await userValidationSchema.validate(data)
+    next()
   } catch (error) {
-    res
-      .status(422)
-      .send({ authenticated: false, message: 'Invalid credentials' })
+    next(new CustomError(error.message, 422))
   }
 }
 
@@ -38,10 +31,7 @@ const isUsernameTaken = async (req, res, next) => {
     if (result.rows.length === 0) {
       next()
     } else {
-      res.status(409).send({
-        authenticated: false,
-        message: 'Username is already taken!',
-      })
+      next(new CustomError('Username is already taken!', 409))
     }
   } catch (err) {
     next(err)
@@ -78,16 +68,12 @@ const registerUser = async (req, res, next) => {
     })
 
     res.status(200).send({
-      authenticated: true,
+      success: true,
       token,
       username: req.body.username,
     })
   } catch (err) {
-    console.error(err)
-    res.status(500).send({
-      authenticated: false,
-      message: 'An error occurred, please try again later',
-    })
+    next(err)
   }
 }
 
@@ -95,18 +81,12 @@ const isUserAuthenticated = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization']
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).send({
-        authenticated: false,
-        message: 'Invalid Authorization header',
-      })
+      return next(new CustomError('Invalid Authorization header', 401))
     }
 
     const token = authHeader.split(' ')[1]
     if (!token || token === 'null') {
-      return res.status(401).send({
-        authenticated: false,
-        message: 'Invalid Authorization header',
-      })
+      return next(new CustomError('Invalid Authorization header', 401))
     }
 
     const decoded = await new Promise((resolve, reject) => {
@@ -125,7 +105,7 @@ const isUserAuthenticated = async (req, res, next) => {
     )
 
     if (result.rows.length === 0) {
-      return res.status(401).send({ authenticated: false, token: null })
+      return next(new CustomError('User does not exist!', 401))
     }
 
     res.status(200).send({
@@ -134,11 +114,7 @@ const isUserAuthenticated = async (req, res, next) => {
       username: result.rows[0].username,
     })
   } catch (err) {
-    console.error(err)
-    res.status(500).send({
-      authenticated: false,
-      message: 'An error occurred, please try again later',
-    })
+    next(err)
   }
 }
 
@@ -172,28 +148,18 @@ const login = async (req, res, next) => {
         })
 
         res.status(200).send({
-          authenticated: true,
+          success: true,
           token,
           username: req.body.username,
         })
       } else {
-        res.status(401).send({
-          authenticated: false,
-          message: 'Wrong username or password!',
-        })
+        next(new CustomError('Wrong username or password!', 401))
       }
     } else {
-      res.status(401).send({
-        authenticated: false,
-        message: 'Wrong username or password!',
-      })
+      next(new CustomError('Wrong username or password!', 401))
     }
   } catch (err) {
-    console.error(err)
-    res.status(500).send({
-      authenticated: false,
-      message: 'An error occurred, please try again later',
-    })
+    next(err)
   }
 }
 

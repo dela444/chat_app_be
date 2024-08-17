@@ -7,7 +7,7 @@ const userValidationSchema = Yup.object({
     .max(35, 'Username too long!'),
   password: Yup.string()
     .required('Password is a required field!')
-    .min(8, 'Password too short')
+    .min(8, 'Password must be at least 8 characters long')
     .max(35, 'Password too long!'),
 })
 

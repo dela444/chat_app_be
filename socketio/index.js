@@ -43,7 +43,7 @@ const setUpUser = async (socket) => {
   const messages = await redisClient.lrange(
     `messages:${socket.user.userid}`,
     0,
-    -1
+    10
   )
 
   const parsedMessages = messages.map((message) => {

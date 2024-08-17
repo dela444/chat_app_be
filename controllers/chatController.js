@@ -10,14 +10,10 @@ const {
 const roomValidationCheck = async (req, res, next) => {
   const data = req.body
   try {
-    const valid = await roomValidationSchema.validate(data)
-    if (valid) {
-      next()
-    } else {
-      res.status(422).send({ success: false, message: 'Invalid room name!' })
-    }
+    await roomValidationSchema.validate(data)
+    next()
   } catch (error) {
-    res.status(422).send({ success: false, message: error.message })
+    next(new CustomError(error.message, 422))
   }
 }
 
@@ -31,10 +27,7 @@ const isRoomNameTaken = async (req, res, next) => {
     if (result.rows.length === 0) {
       next()
     } else {
-      res.status(409).send({
-        success: false,
-        message: 'Name is already taken!',
-      })
+      next(new CustomError('Name is already taken!', 409))
     }
   } catch (err) {
     next(err)
@@ -62,14 +55,10 @@ const createChatRoom = async (req, res, next) => {
 const messageValidationCheck = async (req, res, next) => {
   const data = req.body
   try {
-    const valid = await messageValidationSchema.validate(data)
-    if (valid) {
-      next()
-    } else {
-      res.status(422).send({ success: false, message: 'Invalid message!' })
-    }
+    await messageValidationSchema.validate(data)
+    next()
   } catch (error) {
-    res.status(422).send({ success: false, message: 'Invalid message!' })
+    next(new CustomError('Invalid message data', 422))
   }
 }
 

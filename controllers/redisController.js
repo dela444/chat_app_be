@@ -1,28 +1,29 @@
 const redisClient = require('../redis')
 
-const rateLimiter = (seconds, limit, isAuth) => async (req, res, next) => {
+const rateLimiter = (seconds, limit) => async (req, res, next) => {
   const ip = req.ip || req.connection.remoteAddress
 
-  const response = await redisClient.multi().incr(ip).expire(ip, seconds).exec()
+  try {
+    const response = await redisClient
+      .multi()
+      .incr(ip)
+      .expire(ip, seconds)
+      .exec()
 
-  const [incrResponse, expireResponse] = response
+    const [incrResponse, expireResponse] = response
 
-  if (incrResponse[1] > limit) {
-    if (isAuth) {
-      res.send({
-        authenticated: false,
-        message:
+    if (incrResponse[1] > limit) {
+      next(
+        new CustomError(
           'You have reached the rate limit. Please wait a moment before trying again.',
-      })
+          422
+        )
+      )
     } else {
-      res.send({
-        success: false,
-        message:
-          'You have reached the rate limit. Please wait a moment before trying again.',
-      })
+      next()
     }
-  } else {
-    next()
+  } catch (err) {
+    next(err)
   }
 }
 

@@ -17,6 +17,7 @@ const {
 
 var chatRouter = require('./routes/chat')
 var authRouter = require('./routes/auth')
+const CustomError = require('./controllers/errorController')
 
 const app = express()
 
@@ -33,6 +34,28 @@ app.use(express.urlencoded({ extended: true }))
 
 app.use('/', chatRouter)
 app.use('/auth', authRouter)
+app.all('*', (req, res, next) => {
+  const err = new CustomError(`Route ${req.originalUrl} not found`, 404)
+  next(err)
+})
+
+app.use((error, req, res, next) => {
+  error.statusCode = error.statusCode || 500
+  error.status = error.status || 'error'
+  if (error.isOperational) {
+    res.status(error.statusCode).send({
+      success: false,
+      status: error.status,
+      message: error.message,
+    })
+  } else {
+    res.status(500).send({
+      success: false,
+      status: error.status,
+      message: 'Something went wrong! Please try again later.',
+    })
+  }
+})
 
 const server = require('http').createServer(app)
 
