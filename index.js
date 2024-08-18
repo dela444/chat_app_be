@@ -21,9 +21,12 @@ const CustomError = require('./controllers/errorController')
 
 const app = express()
 
-app.use(cors({
-  origin: 'https://chat-app-fe-seven.vercel.app',
-}))
+app.use(
+  cors({
+    origin: 'https://chat-app-fe-seven.vercel.app',
+    credentials: true,
+  })
+)
 app.use(helmet())
 app.use(express.json())
 app.use(cookieParser())
@@ -57,7 +60,10 @@ app.use((error, req, res, next) => {
 const server = require('http').createServer(app)
 
 const io = new Server(server, {
-  cors: corsOptions,
+  cors: {
+    origin: 'https://chat-app-fe-seven.vercel.app',
+    credentials: true,
+  },
 })
 
 io.use(verifySocketUser)
