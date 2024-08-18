@@ -57,10 +57,72 @@ const parseRoomList = async (roomList) => {
   return newRoomList
 }
 
+const incrementAndExpire = async (ip, seconds) => {
+  const response = await redisClient.multi().incr(ip).expire(ip, seconds).exec()
+  return response
+}
+
+const setUserOnlineStatus = async (userid, isConnected) => {
+  const response = await redisClient.hset(
+    `user:${userid}`,
+    'connected',
+    isConnected
+  )
+  return response
+}
+
+const getAllUsers = async () => {
+  const response = await redisClient.lrange('usersList', 0, -1)
+  return response
+}
+
+const getAllRooms = async () => {
+  const response = await redisClient.lrange('roomsList', 0, -1)
+  return response
+}
+
+const getLastMessages = async (howMany, userid) => {
+  const response = await redisClient.lrange(`messages:${userid}`, 0, howMany)
+  return response
+}
+
+const setMessage = async (recipientid, messageString) => {
+  const response = await redisClient.lpush(
+    `messages:${recipientid}`,
+    messageString
+  )
+  return response
+}
+
+const setLastSeenMessage = async (userOne, userTwo, messageId) => {
+  const response = await redisClient.hset(
+    `lastSeenMessage:${userOne}`,
+    `chat:${userTwo}`,
+    messageId
+  )
+  return response
+}
+
+const getLastSeenMessage = async (userOne, userTwo) => {
+  const response = await redisClient.hget(
+    `lastSeenMessage:${userOne}`,
+    `chat:${userTwo}`
+  )
+  return response
+}
+
 module.exports = {
+  getLastSeenMessage,
+  setLastSeenMessage,
+  setMessage,
+  getLastMessages,
+  getAllRooms,
+  getAllUsers,
   storeUserToRedis,
   storeUsersToRedis,
   storeRoomsToRedis,
   parseUserList,
   parseRoomList,
+  incrementAndExpire,
+  setUserOnlineStatus,
 }

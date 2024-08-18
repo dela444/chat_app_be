@@ -1,14 +1,12 @@
+const { incrementAndExpire } = require('../helpers/redisHelpers')
 const redisClient = require('../redis')
+const CustomError = require('./errorController')
 
 const rateLimiter = (seconds, limit) => async (req, res, next) => {
   const ip = req.ip || req.connection.remoteAddress
 
   try {
-    const response = await redisClient
-      .multi()
-      .incr(ip)
-      .expire(ip, seconds)
-      .exec()
+    const response = await incrementAndExpire(ip, seconds)
 
     const [incrResponse, expireResponse] = response
 

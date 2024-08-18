@@ -2,7 +2,17 @@ const jwt = require('jsonwebtoken')
 require('dotenv').config()
 
 const redisClient = require('../redis')
-const { parseUserList, parseRoomList } = require('../helpers/redisHelpers')
+const {
+  parseUserList,
+  parseRoomList,
+  setUserOnlineStatus,
+  getAllUsers,
+  getAllRooms,
+  getLastMessages,
+  setMessage,
+  setLastSeenMessage,
+  getLastSeenMessage,
+} = require('../helpers/redisHelpers')
 
 const verifySocketUser = async (socket, next) => {
   const token = socket.handshake.auth.token
@@ -26,25 +36,21 @@ const verifySocketUser = async (socket, next) => {
 
 const setUpUser = async (socket) => {
   socket.join(socket.user.userid)
-  await redisClient.hset(`user:${socket.user.userid}`, 'connected', true)
-  const usersList = await redisClient.lrange('usersList', 0, -1)
+  await setUserOnlineStatus(socket.user.userid, true)
+  const usersList = await getAllUsers()
   const parsedUserList = await parseUserList(usersList)
   const userRooms = parsedUserList.map((user) => user.userid)
 
   if (userRooms.length > 0)
     socket.to(userRooms).emit('connected', true, socket.user.userid)
 
-  const roomsList = await redisClient.lrange('roomsList', 0, -1)
+  const roomsList = await getAllRooms()
   const parsedRoomList = await parseRoomList(roomsList)
 
   socket.emit('users', parsedUserList)
   socket.emit('rooms', parsedRoomList)
 
-  const messages = await redisClient.lrange(
-    `messages:${socket.user.userid}`,
-    0,
-    10
-  )
+  const messages = await getLastMessages(10, socket.user.userid)
 
   const parsedMessages = messages.map((message) => {
     const parsedMessage = message.split('.')
@@ -64,8 +70,8 @@ const setUpUser = async (socket) => {
 }
 
 const onDisconnection = async (socket) => {
-  await redisClient.hset(`user:${socket.user.userid}`, 'connected', false)
-  const usersList = await redisClient.lrange('usersList', 0, -1)
+  await setUserOnlineStatus(socket.user.userid, false)
+  const usersList = await getAllUsers()
   const parsedUserList = await parseUserList(usersList)
   const userRooms = parsedUserList.map((user) => user.userid)
 
@@ -74,24 +80,20 @@ const onDisconnection = async (socket) => {
 }
 
 const sendMessage = async (socket, message) => {
-  try {
-    const messageString = [
-      message.recipient_id,
-      message.from,
-      message.content,
-      message.message_id,
-      'delivered',
-      message.recipient_type,
-      message.creation_time,
-    ].join('.')
+  const messageString = [
+    message.recipient_id,
+    message.from,
+    message.content,
+    message.message_id,
+    'delivered',
+    message.recipient_type,
+    message.creation_time,
+  ].join('.')
 
-    await redisClient.lpush(`messages:${message.recipient_id}`, messageString)
-    await redisClient.lpush(`messages:${message.from}`, messageString)
+  await setMessage(message.recipient_id, messageString)
+  await setMessage(message.from, messageString)
 
-    socket.to(message.recipient_id).emit('sendMessage', message)
-  } catch (error) {
-    console.log(error)
-  }
+  socket.to(message.recipient_id).emit('sendMessage', message)
 }
 
 const joinRoom = async (socket, data) => {
@@ -101,7 +103,7 @@ const joinRoom = async (socket, data) => {
   if (data.newRoom) {
     socket.join(data.newRoom)
 
-    const messages = await redisClient.lrange(`messages:${data.newRoom}`, 0, 5)
+    const messages = await getLastMessages(5, data.newRoom)
 
     const parsedMessages = messages.map((message) => {
       const parsedMessage = message.split('.')
@@ -122,32 +124,27 @@ const joinRoom = async (socket, data) => {
 }
 
 const lastSeenMessage = async (socket, data) => {
-  await redisClient.hset(
-    `lastSeenMessage:${socket.user.userid}`,
-    `chat:${data.userid}`,
+  await setLastSeenMessage(
+    socket.user.userid,
+    data.userid,
     data.lastSeenMessage
   )
-  const lastSeenMessage = await redisClient.hget(
-    `lastSeenMessage:${data.userid}`,
-    `chat:${socket.user.userid}`
+
+  const lastSeenMessage = await getLastSeenMessage(
+    data.userid,
+    socket.user.userid
   )
+
   if (!lastSeenMessage) {
-    await redisClient.hset(
-      `lastSeenMessage:${data.userid}`,
-      `chat:${socket.user.userid}`,
-      '0'
-    )
+    await setLastSeenMessage(data.userid, socket.user.userid, '0')
   }
+
   socket.emit('messagesRead', lastSeenMessage || '0')
   socket.to(data.userid).emit('seen', socket.user.userid)
 }
 
 const messageSeen = async (socket, data) => {
-  await redisClient.hset(
-    `lastSeenMessage:${socket.user.userid}`,
-    `chat:${data.userid}`,
-    data.messageid
-  )
+  await setLastSeenMessage(socket.user.userid, data.userid, data.messageid)
   socket.to(data.userid).emit('messageSeen', true)
 }
 

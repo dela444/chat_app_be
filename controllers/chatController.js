@@ -6,6 +6,7 @@ const {
   roomValidationSchema,
   messageValidationSchema,
 } = require('../helpers/validationHelpers')
+const CustomError = require('./errorController')
 
 const roomValidationCheck = async (req, res, next) => {
   const data = req.body
