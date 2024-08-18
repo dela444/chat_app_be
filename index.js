@@ -21,12 +21,9 @@ const CustomError = require('./controllers/errorController')
 
 const app = express()
 
-const corsOptions = {
+app.use(cors({
   origin: 'https://chat-app-fe-seven.vercel.app',
-  credentials: true,
-}
-
-app.use(cors(corsOptions))
+}))
 app.use(helmet())
 app.use(express.json())
 app.use(cookieParser())
