@@ -22,7 +22,7 @@ const CustomError = require('./controllers/errorController')
 const app = express()
 
 const corsOptions = {
-  origin: process.env.FRONTEND_URL,
+  origin: 'https://chat-app-fe-seven.vercel.app',
   credentials: true,
 }
 
