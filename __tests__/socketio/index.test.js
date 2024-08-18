@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken')
+
 const {
   verifySocketUser,
   setUpUser,
@@ -55,7 +56,7 @@ describe('Socket.io functions tests', () => {
       emit: jest.fn(),
       to: jest.fn().mockReturnThis(),
       user: { userid: 'user1' },
-      leave: jest.fn()
+      leave: jest.fn(),
     }
     jest.clearAllMocks()
   })

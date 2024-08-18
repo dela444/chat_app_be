@@ -1,7 +1,6 @@
 var express = require('express')
 var router = express.Router()
 
-const rateLimiter = require('../controllers/redisController')
 const {
   roomValidationCheck,
   isRoomNameTaken,
@@ -9,6 +8,7 @@ const {
   messageValidationCheck,
   createMessage,
 } = require('../controllers/chatController')
+const rateLimiter = require('../helpers/rateLimiter')
 
 router.post(
   '/create-room',

@@ -1,5 +1,5 @@
 const CustomError = require('../../controllers/errorController')
-const rateLimiter = require('../../controllers/redisController')
+const rateLimiter = require('../../helpers/rateLimiter')
 const { incrementAndExpire } = require('../../helpers/redisHelpers')
 
 jest.mock('../../redis', () => ({

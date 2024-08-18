@@ -86,6 +86,6 @@ io.on('connect', (socket) => {
   })
 })
 
-server.listen(5000, () => {
+server.listen(process.env.PORT, () => {
   console.log('server started on port 5000')
 })
