@@ -22,7 +22,7 @@ const CustomError = require('./controllers/errorController')
 const app = express()
 
 const corsOptions = {
-  origin: 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL,
   credentials: true,
 }
 
@@ -86,6 +86,6 @@ io.on('connect', (socket) => {
   })
 })
 
-server.listen(process.env.PORT, () => {
+server.listen(process.env.PORT || 5000, () => {
   console.log('server started on port 5000')
 })
